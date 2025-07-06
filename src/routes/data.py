@@ -1,10 +1,12 @@
-from fastapi import FastAPI, APIRouter, Depends, UploadFile, status
+from fastapi import APIRouter, Depends, UploadFile, status
 from fastapi.responses import JSONResponse
 from helper.config import get_settings, Settings
-from controllers import DataController, ProjectController
+from controllers import DataController
 from models import ResponseStatus
 import aiofiles
+import logging
 
+logger = logging.getLogger(__name__)  # Use module-level logger
 
 data_router = APIRouter(
     prefix="/api/v1/data",
@@ -22,10 +24,12 @@ async def upload_data(
     Upload a data file to the server for a specific project.
     """
     data_controller = DataController()
+    logger.info(f"Received upload request for project: {project_id}, file: {file.filename}")
 
-    # Validate the uploaded file
+    # Step 1: Validate the file
     validation_result = await data_controller.validate_file(file)
     if not validation_result['valid']:
+        logger.warning(f"Validation failed for file '{file.filename}': {validation_result['reason']}")
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
@@ -34,18 +38,42 @@ async def upload_data(
             }
         )
 
-    # Generate safe and unique filename path
-    safe_path = await data_controller.generate_unique_filename(file.filename, project_id)
+    # Step 2: Generate a unique, safe file path
+    try:
+        safe_path = await data_controller.generate_unique_filename(file.filename, project_id)
+    except Exception as e:
+        logger.error(f"Failed to generate file path for project '{project_id}': {e}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "Status": ResponseStatus.FILE_UPLOAD_FAILED.value,
+                "reason": "File path generation failed"
+            }
+        )
 
-    # Save the file chunk by chunk
-    async with aiofiles.open(safe_path, 'wb') as out_file:
-        while chunk := await file.read(app_settings.FILE_DEFAULT_CHUNK_SIZE):
-            await out_file.write(chunk)
+    # Step 3: Save the file in chunks
+    try:
+        async with aiofiles.open(safe_path, 'wb') as out_file:
+            while chunk := await file.read(app_settings.FILE_DEFAULT_CHUNK_SIZE):
+                await out_file.write(chunk)
+        logger.info(f"File '{file.filename}' uploaded successfully to '{safe_path}' for project '{project_id}'")
+    except Exception as e:
+        logger.error(f"File upload failed: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "Status": ResponseStatus.FILE_UPLOAD_FAILED.value,
+                "reason": str(e)
+            }
+        )
 
+    # Step 4: Return success response with metadata
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
         content={
             "Status": ResponseStatus.FILE_UPLOAD_SUCCESS.value,
-            "file_path": str(safe_path)
+            "original_filename": file.filename,
+            "file_path": str(safe_path),
+            "content_type": file.content_type
         }
     )
