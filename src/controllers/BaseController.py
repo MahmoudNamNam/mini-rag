@@ -1,4 +1,6 @@
 from helper.config import get_settings, Settings
+from pathlib import Path
+import os
 
 class BaseController:
     """
@@ -6,6 +8,8 @@ class BaseController:
     """
     def __init__(self):
         self.app_settings = get_settings()
+        self.base_path = Path(__file__).resolve().parents[1]
+        self.files_dir = self.base_path / "assets" / "files"
 
     def get_app_settings(self):
         """
