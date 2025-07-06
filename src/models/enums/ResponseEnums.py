@@ -1,6 +1,9 @@
 from enum import Enum
 
 class ResponseStatus(Enum):
+    """
+    Enum representing response status codes for file upload and validation operations.
+    """
 
     FILE_VALIDATION_SUCCESS = "file_validation_success"
     FILE_TYPE_NOT_SUPPORTED = "file_type_not_supported"
