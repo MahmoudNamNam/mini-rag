@@ -49,7 +49,7 @@ class DataController(BaseController):
             "reason": None
         }
 
-    async def generate_unique_filename(self, orig_file_name: str, project_id: str) -> str:
+    async def generate_unique_filepath(self, orig_file_name: str, project_id: str) -> str:
         """
         Generates a unique, sanitized filename under the project directory.
         """
@@ -64,7 +64,7 @@ class DataController(BaseController):
             unique_filename = f"{random_key}_{cleaned_name}"
             new_file_path = os.path.join(project_path, unique_filename)
         
-        return new_file_path
+        return new_file_path,unique_filename
 
     def get_cleaned_filename(self, orig_file_name: str) -> str:
         """

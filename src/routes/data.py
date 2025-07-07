@@ -40,7 +40,7 @@ async def upload_data(
 
     # Step 2: Generate a unique, safe file path
     try:
-        safe_path = await data_controller.generate_unique_filename(file.filename, project_id)
+        safe_path,file_id = await data_controller.generate_unique_filepath(file.filename, project_id)
     except Exception as e:
         logger.error(f"Failed to generate file path for project '{project_id}': {e}")
         return JSONResponse(
@@ -72,8 +72,7 @@ async def upload_data(
         status_code=status.HTTP_201_CREATED,
         content={
             "Status": ResponseStatus.FILE_UPLOAD_SUCCESS.value,
-            "original_filename": file.filename,
+            "file_id": file_id,
             "file_path": str(safe_path),
-            "content_type": file.content_type
         }
     )
