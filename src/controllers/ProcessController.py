@@ -76,7 +76,7 @@ class ProcessController(BaseController):
             file_content (list): List of Document-like objects with `page_content` and `metadata` attributes.
             file_id (str): Identifier for logging/debugging purposes.
             chunk_size (int): Max characters per chunk.
-            chunk_overlap (int): Overlap between consecutive chunks.
+            overlap_size (int): Overlap between consecutive chunks.
 
         Returns:
             list: List of chunked Document objects.
