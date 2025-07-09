@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, UploadFile, status
+from fastapi import APIRouter, Depends, UploadFile, status,HTTPException
 from fastapi.responses import JSONResponse
 from helper.config import get_settings, Settings
-from controllers import DataController
+from .schema import ProcessRequest
+from controllers import DataController,ProcessController
 from models import ResponseStatus
 import aiofiles
 import logging
@@ -74,5 +75,46 @@ async def upload_data(
             "Status": ResponseStatus.FILE_UPLOAD_SUCCESS.value,
             "file_id": file_id,
             "file_path": str(safe_path),
+
+        }
+    )
+
+@data_router.post("/process/{project_id}")
+async def process_endpoint(project_id: str, process_request: ProcessRequest):
+    file_id = process_request.file_id
+    chunk_size = process_request.chunk_size
+    overlap_size = process_request.overlap_size
+
+    process_controller = ProcessController(project_id=project_id)
+    file_content = process_controller.get_file_content(file_id=file_id)
+
+    if not file_content:
+        logger.warning(f"No content found for file '{file_id}' in project '{project_id}'")
+        raise HTTPException(
+            ResponseStatus.PROCESSING_FAILED.value,
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No content found for file '{file_id}' in project '{project_id}'"
+        )
+
+    file_chunks = process_controller.process_file_content(
+        file_content=file_content,
+        file_id=file_id,
+        chunk_size=chunk_size,
+        overlap_size=overlap_size
+    )
+
+    logger.info(f"Processed {len(file_chunks)} chunks for file '{file_id}' in project '{project_id}'")
+
+    chunks_serialized = [
+        {"content": doc.page_content, "metadata": doc.metadata}
+        for doc in file_chunks
+    ]
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "Status": ResponseStatus.PROCESSING_SUCCESS.value,
+            "file_id": file_id,
+            "chunks": chunks_serialized
         }
     )
