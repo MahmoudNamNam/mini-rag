@@ -16,15 +16,3 @@ class BaseController:
 
     def generate_unique_key(self, length: int = 12) -> str:
         return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
-
-    def get_app_settings(self):
-        """
-        Returns the application settings.
-        """
-        return self.app_settings
-
-    def handle_error(self, error):
-        """
-        Handles errors and returns a standardized error response.
-        """
-        return {"error": str(error)}

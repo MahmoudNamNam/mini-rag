@@ -54,7 +54,7 @@ class DataController(BaseController):
         Generates a unique, sanitized filename under the project directory.
         """
         random_key = self.generate_unique_key(length=12)
-        project_path = await ProjectController().get_project_path(project_id=project_id)
+        project_path = ProjectController().get_project_path(project_id=project_id)
         cleaned_name = self.get_cleaned_filename(orig_file_name)
         unique_filename = f"{random_key}_{cleaned_name}"
         new_file_path = os.path.join(project_path, unique_filename)
