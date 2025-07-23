@@ -1,29 +1,11 @@
 from fastapi import FastAPI
 from motor.motor_asyncio import AsyncIOMotorClient
 from routes import base, data
-<<<<<<< HEAD
-<<<<<<< HEAD
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import sys
-sys.path.append("./src")
-=======
-
 from helper.config import get_settings
 import logging
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
->>>>>>> b9f47690f59584ba4f7ced78d7dd3fdb93248047
-
-=======
-from helper.config import get_settings
-import logging
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
->>>>>>> mongo
 
 app = FastAPI()
 

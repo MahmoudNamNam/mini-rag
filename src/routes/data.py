@@ -1,6 +1,5 @@
 
-from fastapi import APIRouter, Depends, UploadFile, status,Request
-
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status,Request
 from fastapi.responses import JSONResponse
 from helper.config import get_settings, Settings
 from .schema import ProcessRequest
