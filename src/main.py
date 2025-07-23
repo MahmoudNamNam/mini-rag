@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from motor.motor_asyncio import AsyncIOMotorClient
 from routes import base, data
+
 from helper.config import get_settings
 import logging
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
 
 app = FastAPI()
 

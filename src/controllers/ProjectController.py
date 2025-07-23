@@ -5,7 +5,7 @@ class ProjectController(BaseController):
     def __init__(self):
         super().__init__()
 
-    async def get_project_path(self, project_id: str) -> str:
+    def get_project_path(self, project_id: str) -> str:
         """
         Returns the path to the project directory based on the project ID.
         
