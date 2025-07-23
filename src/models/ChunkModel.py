@@ -54,3 +54,22 @@ class ChunkModel(BaseDataModel):
         except Exception as e:
             logger.exception("Failed to insert chunks: %s", str(e))
             raise
+    
+    async def delete_chunk_by_project_id(self, project_id: ObjectId) -> int:
+        """
+        Delete all chunks associated with a given project_id.
+
+        Args:
+            project_id (ObjectId): The unique identifier of the project.
+
+        Returns:
+            int: The number of deleted chunk documents.
+        """
+        logger.info("Attempting to delete chunks for project ID: %s", str(project_id))
+        try:
+            result = await self.collection.delete_many({"chunk_project_id": project_id})
+            logger.info("Deleted %d chunks for project ID: %s", result.deleted_count, str(project_id))
+            return result.deleted_count
+        except Exception as e:
+            logger.exception("Failed to delete chunks for project ID %s: %s", str(project_id), str(e))
+            raise
