@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from pydantic import BaseModel, Field
 from typing import Optional, Dict
 from bson import ObjectId
@@ -41,3 +42,18 @@ class DataChunk(BaseModel):
                 "metadata": {"source": "user_upload"}
             }
         }
+=======
+from pydantic import BaseModel, Field, validator
+from typing import Optional
+from bson.objectid import ObjectId
+
+class DataChunk(BaseModel):
+    id: Optional[ObjectId] = Field(None, alias="_id")
+    chunk_text: str = Field(..., min_length=1)
+    chunk_metadata: dict
+    chunk_order: int = Field(..., gt=0)
+    chunk_project_id: ObjectId
+
+    class Config:
+        arbitrary_types_allowed = True
+>>>>>>> b9f47690f59584ba4f7ced78d7dd3fdb93248047

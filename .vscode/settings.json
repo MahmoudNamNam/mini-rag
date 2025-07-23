@@ -2,6 +2,7 @@
     "python.analysis.extraPaths": [
         "./src",
         "./src",
-        "./src/routes"
+        "./src/models/db_schemes",
+        "./src"
     ]
 }

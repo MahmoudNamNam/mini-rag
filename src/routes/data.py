@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, UploadFile, status,HTTPException
+
+from fastapi import APIRouter, Depends, UploadFile, status,Request
+
 from fastapi.responses import JSONResponse
 from helper.config import get_settings, Settings
 from .schema import ProcessRequest
@@ -6,8 +8,9 @@ from controllers import DataController,ProcessController
 from models import ResponseStatus
 import aiofiles
 import logging
+from models.ProjectModel import ProjectModel
 
-logger = logging.getLogger(__name__)  # Use module-level logger
+logger = logging.getLogger(__name__)
 
 data_router = APIRouter(
     prefix="/api/v1/data",
@@ -17,6 +20,7 @@ data_router = APIRouter(
 
 @data_router.post("/upload/{project_id}")
 async def upload_data(
+    request: Request,
     project_id: str,
     file: UploadFile,
     app_settings: Settings = Depends(get_settings)
@@ -24,6 +28,9 @@ async def upload_data(
     """
     Upload a data file to the server for a specific project.
     """
+    project_model = ProjectModel(db_client= request.app.mongodb_client)
+    project = await project_model.get_project_or_create_one(project_id=project_id)
+
     data_controller = DataController()
     logger.info(f"Received upload request for project: {project_id}, file: {file.filename}")
 
