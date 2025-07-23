@@ -4,6 +4,7 @@ from .db_schemes import DataChunk
 from .enums.DataBaseEnum import DataBaseEnum
 from bson import ObjectId
 from pymongo import InsertOne
+from typing import List
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class ChunkModel(BaseDataModel):
             logger.exception("Failed to fetch chunk with ID %s: %s", chunk_id, str(e))
             raise
 
-    async def insert_many_chunks(self, chunks: list[DataChunk],batch_size: int = 100):
+    async def insert_many_chunks(self, chunks: List[DataChunk],batch_size: int = 100):
         logger.info("Attempting to insert multiple chunks")
         try:
             for i in range(0, len(chunks), batch_size):
