@@ -1,51 +1,58 @@
-# mini-rag
+Here is your updated project write-up with the embedded Figma prototype replaced by a **demo video** iframe instead. Let me know if you want to embed a different type of media (e.g., Loom, YouTube, or self-hosted preview):
 
-This is a minimal implementation of the RAG model for question answering.
+---
 
-## Requirements
+# ⚖️ Empowering Legal Teams to Review Contracts 150% Faster
 
-- Python 3.8 or later
+![alt text](image.png)
 
-#### Install Python using MiniConda
+> 🚧 **This project is currently under active development. Expect changes.**
 
-1) Download and install MiniConda from [here](https://docs.anaconda.com/free/miniconda/#quick-command-line-install)
-2) Create a new environment using the following command:
-```bash
-$ conda create -n mini-rag python=3.8
-```
-3) Activate the environment:
-```bash
-$ conda activate mini-rag
-```
+A contract intelligence platform powered by Machine Learning and served through a FastAPI backend. The system aims to help legal teams drastically reduce contract review time by surfacing key clauses, obligations, and deadlines with AI.
 
-### (Optional) Setup you command line interface for better readability
+---
 
-```bash
-export PS1="\[\033[01;32m\]\u@\h:\w\n\[\033[00m\]\$ "
-```
+## 🧭 Project Goal
 
-## Installation
+Accelerate legal contract reviews by:
 
-### Install the required packages
+* Structuring critical data (terms, dates, obligations) from unstructured documents
+* Simplifying review workflows through intelligent UI + AI
+* Enabling traceability, compliance, and collaboration for legal teams
 
-```bash
-$ pip install -r requirements.txt
-```
+---
 
-### Setup the environment variables
+## 👨‍💻 My Role
 
-```bash
-$ cp .env.example .env
-```
+As the **Machine Learning and Backend Engineer**, I am responsible for:
 
-Set your environment variables in the `.env` file. Like `OPENAI_API_KEY` value.
+* ✅ Designing and training models for clause classification, summarization, and risk detection
+* ✅ Developing and maintaining the FastAPI backend for document ingestion, ML inference, and feedback collection
+* 🛠 Currently working on:
 
-## Run the FastAPI server
+  * Fine-tuning legal-specific transformer models
+  * Building APIs to support real-time frontend interaction
+  * Structuring a modular, scalable ML service architecture
 
-```bash
-$ uvicorn main:app --reload --host 0.0.0.0 --port 5000
-```
 
-## POSTMAN Collection
 
-Download the POSTMAN collection from [/assets/mini-rag-app.postman_collection.json](/assets/mini-rag-app.postman_collection.json)
+## 🎥 Demo
+<video src="./src/routes/assets/Demo.mp4" width="100%" autoplay loop muted playsinline controls>
+  Your browser does not support the video tag.
+</video>
+
+
+---
+
+## 👤 Author
+
+**Mahmoud Namnam**
+ML & Backend Developer
+📫 [mahmoud.namnam72@gmail.com](mailto:mahmoud.namnam72@gmail.com)
+
+---
+
+## ❗Disclaimer
+
+This system is **under active development** and not yet ready for production use. Models and endpoints are subject to change, and API stability is not guaranteed at this stage.
+
