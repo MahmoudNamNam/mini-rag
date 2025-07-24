@@ -33,8 +33,9 @@ As the **Machine Learning and Backend Engineer**, I am responsible for:
 
 
 ## 🎥 Demo
-[![Watch the video](src/assets/demo.gif)](src/assets/demo.mp4)
-
+<p align="center">
+  <img src="src/assets/Demo.gif" width="100%" />
+</p>
 
 ---
 
