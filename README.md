@@ -33,7 +33,8 @@ As the **Machine Learning and Backend Engineer**, I am responsible for:
 
 
 ## 🎥 Demo
-<video src="./src/assets/Demo.mp4" controls autoplay loop muted width="100%"></video>
+[![Watch the video](src/assets/thumbnail.png)](src/assets/demo.mp4)
+
 
 ---
 
