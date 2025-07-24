@@ -37,6 +37,9 @@ As the **Machine Learning and Backend Engineer**, I am responsible for:
   Your browser does not support the video tag.
 </video>
 
+<p align="center">
+  <img src="src/assets/demo.gif" width="100%" />
+</p>
 
 ---
 
