@@ -1,10 +1,6 @@
-Here is your updated project write-up with the embedded Figma prototype replaced by a **demo video** iframe instead. Let me know if you want to embed a different type of media (e.g., Loom, YouTube, or self-hosted preview):
-
----
-
 # ⚖️ Empowering Legal Teams to Review Contracts 150% Faster
 
-![alt text](image.png)
+![alt text](src/assets/image.png)
 
 > 🚧 **This project is currently under active development. Expect changes.**
 
@@ -37,7 +33,7 @@ As the **Machine Learning and Backend Engineer**, I am responsible for:
 
 
 ## 🎥 Demo
-<video src="./src/routes/assets/Demo.mp4" width="100%" autoplay loop muted playsinline controls>
+<video src="./src/assets/Demo.mp4" width="100%" autoplay loop muted playsinline controls>
   Your browser does not support the video tag.
 </video>
 
