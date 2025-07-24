@@ -33,7 +33,7 @@ As the **Machine Learning and Backend Engineer**, I am responsible for:
 
 
 ## 🎥 Demo
-[![Watch the video](src/assets/thumbnail.png)](src/assets/demo.mp4)
+[![Watch the video](src/assets/demo.gif)](src/assets/demo.mp4)
 
 
 ---
