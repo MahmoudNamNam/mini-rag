@@ -33,10 +33,7 @@ As the **Machine Learning and Backend Engineer**, I am responsible for:
 
 
 ## 🎥 Demo
-<video src="./src/assets/Demo.mp4" width="100%" autoplay loop muted playsinline controls>
-  Your browser does not support the video tag.
-</video>
-
+<video src="./src/assets/Demo.mp4" controls autoplay loop muted width="100%"></video>
 
 ---
 
