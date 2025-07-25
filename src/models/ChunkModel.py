@@ -19,7 +19,7 @@ class ChunkModel(BaseDataModel):
     @classmethod
     async def create_instance(cls, db_client: object):
         """
-        Factory method to create an instance of ProjectModel.
+        Factory method to create an instance of ChunkModel.
         """
         instance = cls(db_client=db_client)
         await instance.init_collection()
