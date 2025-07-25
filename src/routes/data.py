@@ -29,7 +29,7 @@ async def upload_data(
     """
     Upload a data file to the server for a specific project.
     """
-    project_model = ProjectModel(db_client= request.app.mongodb_client)
+    project_model = await ProjectModel.create_instance(db_client= request.app.mongodb_client)
     project = await project_model.get_project_or_create_one(project_id=project_id)
 
     data_controller = DataController()
@@ -94,7 +94,7 @@ async def process_endpoint(request:Request ,project_id: str ,process_request: Pr
     overlap_size = process_request.overlap_size
     do_reset = process_request.do_reset
 
-    project_model = ProjectModel(db_client= request.app.mongodb_client)
+    project_model = await ProjectModel.create_instance(db_client= request.app.mongodb_client)
     project = await project_model.get_project_or_create_one(project_id=project_id)
 
     logger.info(f"Processing file '{file_id}' for project '{project_id}' with chunk size {chunk_size} and overlap size {overlap_size}")
@@ -135,7 +135,7 @@ async def process_endpoint(request:Request ,project_id: str ,process_request: Pr
         ) for index, chunk in enumerate(chunks_serialized)
     ]
 
-    chunk_model = ChunkModel(db_client=request.app.mongodb_client)
+    chunk_model = await ChunkModel.create_instance(db_client=request.app.mongodb_client)
     if do_reset==1:
         _= await chunk_model.delete_chunk_by_project_id(project_id=project.id)
         logger.info(f"Resetting chunks for project '{project_id}' as requested")
