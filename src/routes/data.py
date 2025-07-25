@@ -1,4 +1,5 @@
 
+import os
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status,Request
 from fastapi.responses import JSONResponse
 from helper.config import get_settings, Settings
@@ -9,7 +10,10 @@ import aiofiles
 import logging
 from models.ProjectModel import ProjectModel
 from models.ChunkModel import ChunkModel
-from models.db_schemes import DataChunk
+from models.AssetModel import AssetModel
+from models.db_schemes import DataChunk,Asset
+from models.enums.AssetTypeEnum import AssetTypeEnum
+from bson import ObjectId
 
 logger = logging.getLogger(__name__)
 
@@ -75,13 +79,34 @@ async def upload_data(
                 "reason": str(e)
             }
         )
+    # Step 4: Create an Asset record
+    asset_model = await AssetModel.create_instance(db_client=request.app.mongodb_client)
+    asset_resource = Asset(
+        asset_project_id=ObjectId(project.id),
+        asset_type=AssetTypeEnum.DOCUMENT,
+        asset_name=file_id,
+        asset_size=os.path.getsize(safe_path),
+    )
+    try:
+        asset = await asset_model.create_asset(asset=asset_resource)
+        logger.info(f"Asset created successfully with ID: {asset.id}")
+    except Exception as e:
+        logger.error(f"Failed to create asset record: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "Status": ResponseStatus.FILE_UPLOAD_FAILED.value,
+                "reason": "Asset creation failed"
+            }
+        )
+    
 
-    # Step 4: Return success response with metadata
+    # Step 5: Return success response with metadata
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
         content={
             "Status": ResponseStatus.FILE_UPLOAD_SUCCESS.value,
-            "file_id": file_id,
+            "file_id": str(asset.id),
             "file_path": str(safe_path),
 
         }
