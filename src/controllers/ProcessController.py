@@ -1,6 +1,17 @@
 import os
 import logging
 
+# Configure module-level logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# Optional: Add handler if none exists (to avoid duplicate logs if already configured globally)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
 from .BaseController import BaseController
 from .ProjectController import ProjectController
 from langchain_community.document_loaders import (
@@ -18,9 +29,9 @@ class ProcessController(BaseController):
         self.project_id = project_id
         self.project_path = ProjectController().get_project_path(project_id=project_id)
         self.loader_registry = {
-            ProcessingEnums.TXT.value: TextLoader,
-            ProcessingEnums.PDF.value: PyMuPDFLoader,
-            ProcessingEnums.DOCX.value: Docx2txtLoader,
+            ProcessingEnums.TXT: TextLoader,
+            ProcessingEnums.PDF: PyMuPDFLoader,
+            ProcessingEnums.DOCX: Docx2txtLoader,
         }
 
     def get_file_extension(self, file_id: str) -> str:
@@ -37,24 +48,22 @@ class ProcessController(BaseController):
         file_extension = self.get_file_extension(file_id)
         file_path = os.path.join(self.project_path, file_id)
 
-        # Validate file existence
         if not os.path.exists(file_path):
-            logging.error(f"File not found at path: {file_path}")
+            logger.error(f"File not found at path: {file_path}")
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        # Validate loader support
         loader_cls = self.loader_registry.get(file_extension)
         if not loader_cls:
             supported = ", ".join(self.loader_registry.keys())
-            logging.error(f"Unsupported file type '{file_extension}'. Supported types: {supported}")
+            logger.error(f"Unsupported file type '{file_extension}'. Supported types: {supported}")
             raise ValueError(
                 f"Unsupported file type '{file_extension}'. "
                 f"Supported types are: {supported}"
             )
 
-        logging.info(f"Using loader {loader_cls.__name__} for file: {file_path}")
+        logger.info(f"Using loader {loader_cls.__name__} for file: {file_path}")
         return loader_cls(file_path)
-    
+
     def get_file_content(self, file_id: str):
         """
         Loads and returns the content of the specified file using the appropriate loader.
@@ -62,10 +71,10 @@ class ProcessController(BaseController):
         try:
             loader = self.get_file_loader(file_id=file_id)
             documents = loader.load()
-            logging.info(f"Successfully loaded {len(documents)} documents from {file_id}")
+            logger.info(f"Successfully loaded {len(documents)} documents from {file_id}")
             return documents
         except (FileNotFoundError, ValueError) as e:
-            logging.error(f"Error loading file {file_id}: {e}")
+            logger.error(f"Error loading file {file_id}: {e}")
             raise
 
     def process_file_content(self, file_content: list, file_id: str, chunk_size: int = 1000, overlap_size: int = 200):
@@ -89,21 +98,22 @@ class ProcessController(BaseController):
             )
 
             valid_docs = [(doc.page_content, doc.metadata) for doc in file_content 
-              if hasattr(doc, 'page_content') and hasattr(doc, 'metadata')]
-            
+                          if hasattr(doc, 'page_content') and hasattr(doc, 'metadata')]
+
             if not valid_docs:
-                logging.warning(f"No valid documents found in file {file_id}. Returning empty list.")
+                logger.warning(f"No valid documents found in file {file_id}. Returning empty list.")
                 return []
-            file_content_text,file_content_metadata=zip(*valid_docs) if valid_docs else ([], [])
+
+            file_content_text, file_content_metadata = zip(*valid_docs) if valid_docs else ([], [])
 
             if not file_content_text:
-                logging.warning(f"No text content found in file {file_id}. Returning empty list.")
+                logger.warning(f"No text content found in file {file_id}. Returning empty list.")
                 return []
-            
+
             chunks = text_splitter.create_documents(file_content_text, metadatas=file_content_metadata)
-            logging.info(f"Created {len(chunks)} chunks from {file_id} with chunk size {chunk_size} and overlap {overlap_size}")
+            logger.info(f"Created {len(chunks)} chunks from {file_id} with chunk size {chunk_size} and overlap {overlap_size}")
             return chunks
 
         except Exception as e:
-            logging.error(f"Error processing file {file_id}: {e}")
+            logger.error(f"Error processing file {file_id}: {e}")
             raise
