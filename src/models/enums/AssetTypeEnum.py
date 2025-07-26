@@ -9,6 +9,3 @@ class AssetTypeEnum(str, Enum):
     AUDIO = "audio"
     DOCUMENT = "document"
     OTHER = "other"
-
-    def __str__(self):
-        return self.value

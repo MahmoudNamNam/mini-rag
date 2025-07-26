@@ -29,9 +29,9 @@ class ProcessController(BaseController):
         self.project_id = project_id
         self.project_path = ProjectController().get_project_path(project_id=project_id)
         self.loader_registry = {
-            ProcessingEnums.TXT: TextLoader,
-            ProcessingEnums.PDF: PyMuPDFLoader,
-            ProcessingEnums.DOCX: Docx2txtLoader,
+            ProcessingEnums.TXT.value: TextLoader,
+            ProcessingEnums.PDF.value: PyMuPDFLoader,
+            ProcessingEnums.DOCX.value: Docx2txtLoader,
         }
 
     def get_file_extension(self, file_id: str) -> str:

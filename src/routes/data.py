@@ -16,6 +16,12 @@ from models.enums.AssetTypeEnum import AssetTypeEnum
 from bson import ObjectId
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 data_router = APIRouter(
     prefix="/api/v1/data",
@@ -112,75 +118,133 @@ async def upload_data(
         }
     )
 
+
 @data_router.post("/process/{project_id}")
-async def process_endpoint(request:Request ,project_id: str ,process_request: ProcessRequest):
-    file_id = process_request.file_id
+async def process_endpoint(request: Request, project_id: str, process_request: ProcessRequest):
+    logger.info(f"Starting file processing for project_id: {project_id}")
+
     chunk_size = process_request.chunk_size
     overlap_size = process_request.overlap_size
     do_reset = process_request.do_reset
 
-    project_model = await ProjectModel.create_instance(db_client= request.app.mongodb_client)
-    project = await project_model.get_project_or_create_one(project_id=project_id)
-
-    logger.info(f"Processing file '{file_id}' for project '{project_id}' with chunk size {chunk_size} and overlap size {overlap_size}")
-
-
-    process_controller = ProcessController(project_id=project_id)
-    file_content = process_controller.get_file_content(file_id=file_id)
-
-    if not file_content:
-        logger.warning(f"No content found for file '{file_id}' in project '{project_id}'")
-        raise HTTPException(
-            ResponseStatus.PROCESSING_FAILED.value,
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No content found for file '{file_id}' in project '{project_id}'"
-        )
-
-    file_chunks = process_controller.process_file_content(
-        file_content=file_content,
-        file_id=file_id,
-        chunk_size=chunk_size,
-        overlap_size=overlap_size
-    )
-
-    logger.info(f"Processed {len(file_chunks)} chunks for file '{file_id}' in project '{project_id}'")
-
-    chunks_serialized = [
-        {"content": doc.page_content, "metadata": doc.metadata}
-        for doc in file_chunks
-    ]
-    logger.info(f"Serialized {len(chunks_serialized)} chunks for file '{file_id}' in project '{project_id}'")
-
-    file_chunks_record = [
-        DataChunk(
-            chunk_text=chunk['content'],
-            chunk_metadata=chunk['metadata'],
-            chunk_order=index + 1,
-            chunk_project_id=project.id
-        ) for index, chunk in enumerate(chunks_serialized)
-    ]
-
-    chunk_model = await ChunkModel.create_instance(db_client=request.app.mongodb_client)
-    if do_reset==1:
-        _= await chunk_model.delete_chunk_by_project_id(project_id=project.id)
-        logger.info(f"Resetting chunks for project '{project_id}' as requested")
-
+    logger.debug(f"chunk_size: {chunk_size}, overlap_size: {overlap_size}, do_reset: {do_reset}")
 
     try:
-        no_records = await chunk_model.insert_many_chunks(chunks=file_chunks_record)
-        logger.info(f"Inserted {len(file_chunks_record)} chunks into the database for file '{file_id}'")
-    except Exception as e:
-        logger.error(f"Failed to insert chunks into the database for file '{file_id}': {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to insert chunks into the database: {str(e)}"
+        project_model = await ProjectModel.create_instance(
+            db_client=request.app.mongodb_client
         )
+        project = await project_model.get_project_or_create_one(
+            project_id=project_id
+        )
+        logger.info(f"Project resolved: {project_id} -> {project.id}")
+    except Exception as e:
+        logger.exception(f"Failed to initialize or retrieve project: {project_id}")
+        raise
 
+    asset_model = await AssetModel.create_instance(
+        db_client=request.app.mongodb_client
+    )
+
+    project_files_ids = {}
+
+    try:
+        if process_request.file_id:
+            logger.info(f"Fetching specific file: {process_request.file_id}")
+            asset_record = await asset_model.get_asset_record(
+                asset_project_id=project.id,
+                asset_name=process_request.file_id
+            )
+
+            if asset_record is None:
+                logger.warning(f"No file found with name: {process_request.file_id}")
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={"status": ResponseStatus.FILE_ID_ERROR.value}
+                )
+
+            project_files_ids = {asset_record.id: asset_record.asset_name}
+        else:
+            logger.info(f"Fetching all DOCUMENT-type assets for project: {project.id}")
+            project_files = await asset_model.get_all_project_assets(
+                asset_project_id=project.id,
+                asset_type=AssetTypeEnum.DOCUMENT.value,
+            )
+            project_files_ids = {
+                record.id: record.asset_name for record in project_files
+            }
+
+        if len(project_files_ids) == 0:
+            logger.warning(f"No documents found for project: {project.id}")
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"status": ResponseStatus.NO_FILES_ERROR.value}
+            )
+    except Exception as e:
+        logger.exception(f"Failed to retrieve project files for project: {project_id}")
+        raise
+
+    process_controller = ProcessController(project_id=project_id)
+
+    no_records = 0
+    no_files = 0
+
+    chunk_model = await ChunkModel.create_instance(
+        db_client=request.app.mongodb_client
+    )
+
+    if do_reset == 1:
+        logger.info(f"Reset flag is set. Deleting old chunks for project: {project.id}")
+        deleted_count = await chunk_model.delete_chunks_by_project_id(project_id=project.id)
+        logger.info(f"Deleted {deleted_count} old chunks")
+
+    for asset_id, file_id in project_files_ids.items():
+        try:
+            logger.info(f"Processing file: {file_id}")
+            file_content = process_controller.get_file_content(file_id=file_id)
+
+            if file_content is None:
+                logger.error(f"No content returned for file: {file_id}")
+                continue
+
+            file_chunks = process_controller.process_file_content(
+                file_content=file_content,
+                file_id=file_id,
+                chunk_size=chunk_size,
+                overlap_size=overlap_size
+            )
+
+            if not file_chunks:
+                logger.warning(f"No chunks generated for file: {file_id}")
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={"status": ResponseStatus.PROCESSING_FAILED.value}
+                )
+
+            file_chunks_records = [
+                DataChunk(
+                    chunk_text=chunk.page_content,
+                    chunk_metadata=chunk.metadata,
+                    chunk_order=i + 1,
+                    chunk_project_id=project.id,
+                    chunk_asset_id=asset_id
+                )
+                for i, chunk in enumerate(file_chunks)
+            ]
+
+            inserted = await chunk_model.insert_many_chunks(chunks=file_chunks_records)
+            no_records += inserted
+            no_files += 1
+
+            logger.info(f"File {file_id} processed: {inserted} chunks inserted.")
+        except Exception as e:
+            logger.exception(f"Error occurred while processing file {file_id}")
+
+    logger.info(f"Processing completed. Total files: {no_files}, Total chunks: {no_records}")
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
             "Status": ResponseStatus.PROCESSING_SUCCESS.value,
-            "file_id": file_id,
-            "number_of_chunks": no_records,
+            "inserted_chunks": no_records,
+            "processed_files": no_files
         }
     )
