@@ -1,7 +1,7 @@
 from .BaseController import BaseController
 from .ProjectController import ProjectController
 from fastapi import UploadFile
-from typing import Dict, Union
+from typing import Dict, Union,Tuple
 import os
 from models import ResponseStatus
 import re
@@ -46,16 +46,15 @@ class DataController(BaseController):
         return {
             "valid": True,
             "Status": ResponseStatus.FILE_UPLOAD_SUCCESS.value,
-            "reason": None
         }
 
-    async def generate_unique_filepath(self, orig_file_name: str, project_id: str) -> str:
+    async def generate_unique_filepath(self, orig_file_name: str, project_id: str) -> Tuple[str, str]:
         """
         Generates a unique, sanitized filename under the project directory.
         """
         random_key = self.generate_unique_key(length=12)
         project_path = ProjectController().get_project_path(project_id=project_id)
-        cleaned_name = self.get_cleaned_filename(orig_file_name)
+        cleaned_name = self.get_cleaned_filename(orig_file_name)[:100]
         unique_filename = f"{random_key}_{cleaned_name}"
         new_file_path = os.path.join(project_path, unique_filename)
 
