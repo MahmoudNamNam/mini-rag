@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class ChunkModel(BaseDataModel):
     def __init__(self, db_client: object):
         super().__init__(db_client=db_client)
-        self.collection = self.db_client[DataBaseEnum.DATABASE_NAME.value][DataBaseEnum.COLLECTION_CHUNK_NAME.value]
+        self.collection = self.get_collection(DataBaseEnum.COLLECTION_CHUNK_NAME.value)
     
         logger.info("ChunkModel initialized with collection: %s", self.collection.name)
 
@@ -24,16 +24,13 @@ class ChunkModel(BaseDataModel):
         instance = cls(db_client=db_client)
         await instance.init_collection()
         return instance
-    
+  
     async def init_collection(self):
-        all_collections = await self.db_client[DataBaseEnum.DATABASE_NAME.value].list_collection_names()
-        if DataBaseEnum.COLLECTION_CHUNK_NAME.value not in all_collections:
-            logger.info("Collection %s does not exist. Creating it now.", DataBaseEnum.COLLECTION_CHUNK_NAME.value)
-            self.collection = self.db_client[DataBaseEnum.DATABASE_NAME.value][DataBaseEnum.COLLECTION_CHUNK_NAME.value]
-            indexes = DataChunk.get_indexes()
-            for index in indexes:
-                await self.collection.create_index(index["key"], name=index["name"], unique=index.get("unique", False))
-            logger.info("Collection %s created and indexes initialized.", DataBaseEnum.COLLECTION_CHUNK_NAME.value)
+        indexes = DataChunk.get_indexes()
+        await self.init_collection_with_indexes(
+            DataBaseEnum.COLLECTION_CHUNK_NAME.value,
+            indexes
+        )
 
     async def create_chunk(self, chunk: DataChunk):
         logger.info("Attempting to create chunk with order: %d", chunk.chunk_order)

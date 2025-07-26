@@ -10,7 +10,8 @@ class ProjectModel(BaseDataModel):
 
     def __init__(self, db_client: object):
         super().__init__(db_client=db_client)
-        self.collection = self.db_client[DataBaseEnum.DATABASE_NAME.value][DataBaseEnum.COLLECTION_PROJECT_NAME.value]
+        self.collection = self.get_collection(DataBaseEnum.COLLECTION_PROJECT_NAME.value)
+
 
         logger.info("ProjectModel initialized with collection: %s", self.collection.name)
 
@@ -24,14 +25,11 @@ class ProjectModel(BaseDataModel):
         return instance
 
     async def init_collection(self):
-        all_collections = await self.db_client[DataBaseEnum.DATABASE_NAME.value].list_collection_names()
-        if DataBaseEnum.COLLECTION_PROJECT_NAME.value not in all_collections:
-            logger.info("Collection %s does not exist. Creating it now.", DataBaseEnum.COLLECTION_PROJECT_NAME.value)
-            self.collection = self.db_client[DataBaseEnum.DATABASE_NAME.value][DataBaseEnum.COLLECTION_PROJECT_NAME.value]
-            indexes = Project.get_indexes()
-            for index in indexes:
-                await self.collection.create_index(index["key"], name=index["name"], unique=index.get("unique", False))
-            logger.info("Collection %s created and indexes initialized.", DataBaseEnum.COLLECTION_PROJECT_NAME.value)
+        indexes = Project.get_indexes()
+        await self.init_collection_with_indexes(
+            DataBaseEnum.COLLECTION_PROJECT_NAME.value,
+            indexes
+        )
 
 
     async def create_project(self, project: Project):
@@ -64,6 +62,8 @@ class ProjectModel(BaseDataModel):
             return Project(**record)
 
     async def get_all_projects(self, page: int = 1, page_size: int = 10):
+        if page < 1: page = 1
+        if page_size < 1 or page_size > 100: page_size = 10
         logger.info("Fetching all projects: page %d with page size %d", page, page_size)
         try:
             total_documents = await self.collection.count_documents({})

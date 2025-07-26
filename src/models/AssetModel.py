@@ -1,4 +1,5 @@
 import logging
+import re
 from .BaseDataModel import BaseDataModel
 from .db_schemes import Asset
 from .enums.DataBaseEnum import DataBaseEnum
@@ -19,7 +20,8 @@ class AssetModel(BaseDataModel):
 
     def __init__(self, db_client: object):
         super().__init__(db_client=db_client)
-        self.collection = self.db_client[DataBaseEnum.DATABASE_NAME.value][DataBaseEnum.COLLECTION_ASSET_NAME.value]
+        self.collection = self.get_collection(DataBaseEnum.COLLECTION_ASSET_NAME.value)
+
 
     @classmethod
     async def create_instance(cls, db_client: object):
@@ -31,14 +33,11 @@ class AssetModel(BaseDataModel):
         return instance
     
     async def init_collection(self):
-        all_collections = await self.db_client[DataBaseEnum.DATABASE_NAME.value].list_collection_names()
-        if DataBaseEnum.COLLECTION_ASSET_NAME.value not in all_collections:
-            logger.info("Collection %s does not exist. Creating it now.", DataBaseEnum.COLLECTION_ASSET_NAME.value)
-            self.collection = self.db_client[DataBaseEnum.DATABASE_NAME.value][DataBaseEnum.COLLECTION_ASSET_NAME.value]
-            indexes = Asset.get_indexes()
-            for index in indexes:
-                await self.collection.create_index(index["key"], name=index["name"], unique=index.get("unique", False))
-            logger.info("Collection %s created and indexes initialized.", DataBaseEnum.COLLECTION_ASSET_NAME.value)
+        indexes = Asset.get_indexes()
+        await self.init_collection_with_indexes(
+            DataBaseEnum.COLLECTION_ASSET_NAME.value,
+            indexes
+        )
 
     async def create_asset(self, asset: Asset):
         logger.info("Attempting to create asset with ID: %s", asset.id)
@@ -80,7 +79,7 @@ class AssetModel(BaseDataModel):
         try:
             query = {
                 "asset_project_id": ObjectId(asset_project_id) if isinstance(asset_project_id, str) else asset_project_id,
-                "asset_name": asset_name,
+                "asset_name": {"$regex": f"^{re.escape(asset_name)}$", "$options": "i"}
             }
 
             record = await self.collection.find_one(query)
