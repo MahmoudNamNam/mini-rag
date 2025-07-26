@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from functools import lru_cache
 from typing import List
 
 class Settings(BaseSettings):
@@ -21,6 +22,7 @@ class Settings(BaseSettings):
         env_file = ".env"
 
 
+@lru_cache()
 def get_settings() -> Settings:
     """
     Retrieve the application settings.
