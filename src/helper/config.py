@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from typing import List
+import os
 
 class Settings(BaseSettings):
     """
@@ -15,19 +16,10 @@ class Settings(BaseSettings):
     MONGO_URI: str
     MONGO_DB_NAME: str
 
-    class Config:
-        """
-        Configuration for Pydantic settings.
-        """
-        env_file = ".env"
-
+    model_config = SettingsConfigDict(
+        env_file=os.environ.get("ENV_FILE", ".env")
+    )
 
 @lru_cache()
 def get_settings() -> Settings:
-    """
-    Retrieve the application settings.
-
-    Returns:
-        Settings: An instance of the Settings class containing configuration values.
-    """
     return Settings()

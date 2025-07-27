@@ -3,7 +3,6 @@ from .BaseDataModel import BaseDataModel
 from .db_schemes import Project
 from .enums.DataBaseEnum import DataBaseEnum
 
-# Configure logger for this module
 logger = logging.getLogger(__name__)
 
 class ProjectModel(BaseDataModel):
@@ -11,15 +10,10 @@ class ProjectModel(BaseDataModel):
     def __init__(self, db_client: object):
         super().__init__(db_client=db_client)
         self.collection = self.get_collection(DataBaseEnum.COLLECTION_PROJECT_NAME.value)
-
-
         logger.info("ProjectModel initialized with collection: %s", self.collection.name)
 
     @classmethod
     async def create_instance(cls, db_client: object):
-        """
-        Factory method to create an instance of ProjectModel.
-        """
         instance = cls(db_client=db_client)
         await instance.init_collection()
         return instance
@@ -31,12 +25,11 @@ class ProjectModel(BaseDataModel):
             indexes
         )
 
-
     async def create_project(self, project: Project):
         logger.info("Attempting to create project with ID: %s", project.project_id)
         try:
-            result = await self.collection.insert_one(project.dict(by_alias=True, exclude_unset=True))
-            project._id = result.inserted_id
+            result = await self.collection.insert_one(project.model_dump(by_alias=True, exclude_unset=True))
+            project.id = result.inserted_id
             logger.info("Project created successfully with ObjectId: %s", result.inserted_id)
             return project
         except Exception as e:
@@ -45,7 +38,6 @@ class ProjectModel(BaseDataModel):
 
     async def get_project_or_create_one(self, project_id: str):
         logger.info("Looking for project with ID: %s", project_id)
-
         record = await self.collection.find_one({"project_id": project_id})
 
         if record is None:
@@ -64,6 +56,7 @@ class ProjectModel(BaseDataModel):
     async def get_all_projects(self, page: int = 1, page_size: int = 10):
         if page < 1: page = 1
         if page_size < 1 or page_size > 100: page_size = 10
+
         logger.info("Fetching all projects: page %d with page size %d", page, page_size)
         try:
             total_documents = await self.collection.count_documents({})

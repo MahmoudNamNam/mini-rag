@@ -35,7 +35,7 @@ class ChunkModel(BaseDataModel):
     async def create_chunk(self, chunk: DataChunk):
         logger.info("Attempting to create chunk with order: %d", chunk.chunk_order)
         try:
-            result = await self.collection.insert_one(chunk.dict(by_alias=True, exclude_unset=True))
+            result = await self.collection.insert_one(chunk.model_dump(by_alias=True, exclude_unset=True))
             chunk.id = result.inserted_id
             logger.info("Chunk created successfully with ObjectId: %s", result.inserted_id)
             return chunk
@@ -62,7 +62,7 @@ class ChunkModel(BaseDataModel):
         try:
             for i in range(0, len(chunks), batch_size):
                 batch = chunks[i:i + batch_size]
-                operations = [InsertOne(chunk.dict(by_alias=True, exclude_unset=True)) for chunk in batch]
+                operations = [InsertOne(chunk.model_dump(by_alias=True, exclude_unset=True)) for chunk in batch]
                 result = await self.collection.bulk_write(operations)
                 logger.info("Inserted %d chunks in this batch", len(batch))
             logger.info("Successfully inserted %d chunks", len(chunks))
