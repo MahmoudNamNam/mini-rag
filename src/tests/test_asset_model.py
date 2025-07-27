@@ -6,7 +6,6 @@ from models.db_schemes import Asset
 from helper.config import Settings
 
 
-# إعداد مزيف للـ settings (بديل للـ .env)
 @pytest.fixture
 def fake_settings():
     return Settings(
