@@ -4,5 +4,6 @@
         "./src",
         "./src/models/db_schemes",
         "./src"
-    ]
+    ],
+    "python.languageServer": "Pylance"
 }
