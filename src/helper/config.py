@@ -19,21 +19,21 @@ class Settings(BaseSettings):
     MONGO_DB_NAME: str
 
     # LLM config
-    GENERARION_BACKEND: str
+    GENERATION_BACKEND: str
     EMBEDDING_BACKEND: str
 
     OPENAI_API_KEY: str = None
-    OPENAI_API_URL: str =None
-    COHERE_API_KEY: str =None
+    OPENAI_API_URL: str = None
+    COHERE_API_KEY: str = None
 
-    GENERARION_MODEL_ID: str  =None
-    EMBEDDING_MODEL_ID: str =None
-    EMBEDDING_MODEL_SIZE: int =None
+    GENERATION_MODEL_ID: str = None
+    EMBEDDING_MODEL_ID: str = None
+    EMBEDDING_MODEL_SIZE: int = None
 
     # Limits
     INPUT_DEFAULT_MAX_CHARACTERS: int = None
-    GENERARION_DEFAULT_MAX_TOKENS: int = None
-    GENERARION_DEFAULT_TEMPERATURE: float = None
+    GENERATION_DEFAULT_MAX_TOKENS: int = None
+    GENERATION_DEFAULT_TEMPERATURE: float = None
 
     model_config = SettingsConfigDict(
         env_file=os.environ.get("ENV_FILE", ".env")
