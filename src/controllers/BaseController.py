@@ -2,6 +2,7 @@ from helper.config import get_settings, Settings
 from pathlib import Path
 import random
 import string
+import os
 
 
 class BaseController:
@@ -23,3 +24,11 @@ class BaseController:
         Returns the application settings.
         """
         return self.app_settings
+    
+    def get_database_path(self, db_name: str) -> str:
+        """
+        Returns the path to the database directory based on the database name.
+        """
+        db_dir = self.base_path / "assets" / "databases" / db_name
+        db_dir.mkdir(parents=True, exist_ok=True)
+        return str(db_dir)
