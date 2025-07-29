@@ -4,7 +4,6 @@ from ..VectorDBInterface import VectorDBInterface
 from ..VectorDBEnums import DistanceMethodEnums
 import logging
 from typing import List
-from models.db_schemes import RetrievedDocument
 import time
 
 
@@ -290,16 +289,10 @@ class QdrantDBProvider(VectorDBInterface):
                 self.logger.info(f"No results found for vector search in '{collection_name}'")
                 return None
 
-            documents = [
-                RetrievedDocument(
-                    score=result.score,
-                    text=result.payload.get("text", "")
-                )
-                for result in results
-            ]
 
-            self.logger.info(f"Search returned {len(documents)} results from '{collection_name}'")
-            return documents
+
+            self.logger.info(f"Search returned {len(results)} results from '{collection_name}'")
+            return results
 
         except Exception as e:
             self.logger.error(f"Error during vector search in '{collection_name}': {e}")
