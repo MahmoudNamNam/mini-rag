@@ -1,30 +1,61 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from motor.motor_asyncio import AsyncIOMotorClient
-from routes import base, data
-from helper.config import get_settings
 import logging
+from motor.motor_asyncio import AsyncIOMotorClient
+from helper.config import get_settings
+from stores.llm.LLMProviderFactory import LLMProviderFactory
+from routes import base, data
 
-logger = logging.getLogger(__name__)
+# إعداد logger
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-app = FastAPI()
-
-@app.on_event("startup")
-async def startup_db_client():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     settings = get_settings()
+
+    # MongoDB connection
     try:
         app.mongodb_client = AsyncIOMotorClient(settings.MONGO_URI)
         app.mongodb = app.mongodb_client[settings.MONGO_DB_NAME]
         await app.mongodb.command("ping")
         logger.info("Connected to MongoDB")
-    except Exception as e:
-        logger.exception("Error connecting to MongoDB")
+    except Exception:
+        logger.exception("Failed to connect to MongoDB")
         raise
 
-@app.on_event("shutdown")
-async def shutdown_event():
+    # LLM Initialization
+    try:
+        llm_provider_factory = LLMProviderFactory(config=settings)
+
+        app.generation_client = llm_provider_factory.create(provider=settings.GENERATION_BACKEND)
+        if not app.generation_client:
+            raise ValueError(f"Invalid GENERATION_BACKEND: {settings.GENERATION_BACKEND}")
+        app.generation_client.set_generation_model(model_id=settings.GENERATION_MODEL_ID)
+
+        app.embedding_client = llm_provider_factory.create(provider=settings.EMBEDDING_BACKEND)
+        if not app.embedding_client:
+            raise ValueError(f"Invalid EMBEDDING_BACKEND: {settings.EMBEDDING_BACKEND}")
+        app.embedding_client.set_embedding_model(
+            model_id=settings.EMBEDDING_MODEL_ID,
+            embedding_size=settings.EMBEDDING_MODEL_SIZE
+        )
+
+        logger.info("LLM clients initialized successfully")
+    except Exception:
+        logger.exception("Failed to initialize LLM providers")
+        raise
+
+    # Yield control to app
+    yield
+
+    # Shutdown logic
     app.mongodb_client.close()
     logger.info("MongoDB client closed")
 
+# FastAPI app with lifespan
+app = FastAPI(lifespan=lifespan)
+
+# Register routes
 app.include_router(base.base_router)
 app.include_router(data.data_router)
