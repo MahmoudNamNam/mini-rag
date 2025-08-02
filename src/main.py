@@ -4,10 +4,12 @@ import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 from helper.config import get_settings
 from stores.llm.LLMProviderFactory import LLMProviderFactory
-from routes import base, data, nlp
+from stores.vecorDB.VectorDBProviderFactory import VectorDBProviderFactory
+from routes import base, data, nlp  # Keep all routes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -48,21 +50,26 @@ async def lifespan(app: FastAPI):
     # VectorDB Initialization
     try:
         vectordb_provider_factory = VectorDBProviderFactory(config=settings)
-        app.vectordb_client = vectordb_provider_factory.create(
-            provider=settings.VECTOR_DB_BACKEND
-        )
+        app.vectordb_client = vectordb_provider_factory.create(provider=settings.VECTOR_DB_BACKEND)
+
+        if not app.vectordb_client:
+            raise ValueError(f"Invalid VECTOR_DB_BACKEND: {settings.VECTOR_DB_BACKEND}")
+
         await app.vectordb_client.connect()
         logger.info("VectorDB client initialized successfully")
     except Exception:
         logger.exception("Failed to initialize VectorDB provider")
         raise
 
-    # Yield control to the app
     yield
 
     # Shutdown logic
     app.mongodb_client.close()
     logger.info("MongoDB client closed")
+
+    app.vectordb_client.disconnect()
+    logger.info("VectorDB client disconnected")
+
 
 # FastAPI app with lifespan
 app = FastAPI(lifespan=lifespan)

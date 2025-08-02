@@ -10,7 +10,6 @@ class CoHereProvider(LLMInterface):
                  default_output_max_tokens: int = 1000,
                  default_generation_temperature: float = 0.2):
         
-        # إعداد logger مخصص بـ scope واضح
         logger_name = f"{__name__}.CoHereProvider"
         self.logger = logging.getLogger(logger_name)
         self.logger.setLevel(logging.DEBUG)
