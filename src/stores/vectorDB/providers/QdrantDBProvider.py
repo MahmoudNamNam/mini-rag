@@ -38,7 +38,7 @@ class QdrantDBProvider(VectorDBInterface):
                           f"distance_method: {self.distance_method}, "
                           f"index_threshold: {index_threshold}")
         
-    async def connect(self):
+    def connect(self):
         self.logger.debug("Connecting to QdrantDB...")
         try:
             if not self.db_client:
@@ -58,7 +58,7 @@ class QdrantDBProvider(VectorDBInterface):
             self.logger.error(f"Failed to connect to QdrantDB: {e}")
             raise
 
-    async def disconnect(self):
+    def disconnect(self):
         self.logger.debug("Disconnecting from QdrantDB...")
         if self.client:
             try:
@@ -71,7 +71,7 @@ class QdrantDBProvider(VectorDBInterface):
         else:
             self.logger.warning("No active QdrantDB client to disconnect.")
 
-    async def is_collection_existed(self, collection_name: str) -> bool:
+    def is_collection_existed(self, collection_name: str) -> bool:
         self.logger.debug(f"Checking if collection '{collection_name}' exists...")
 
         if not self.client:
@@ -86,7 +86,7 @@ class QdrantDBProvider(VectorDBInterface):
             self.logger.error(f"Error checking collection existence: {e}")
             return False
         
-    async def list_all_collections(self) -> List:
+    def list_all_collections(self) -> List:
         self.logger.debug("Listing all collections...")
         
         if not self.client:
@@ -117,7 +117,7 @@ class QdrantDBProvider(VectorDBInterface):
             self.logger.error(f"Error retrieving collection info: {e}")
             return {}
     
-    async def delete_collection(self, collection_name: str):
+    def delete_collection(self, collection_name: str):
         self.logger.debug(f"Attempting to delete collection '{collection_name}'...")
 
         if not self.client:
@@ -125,7 +125,7 @@ class QdrantDBProvider(VectorDBInterface):
             raise ValueError("QdrantDB client is not connected.")
 
         try:
-            if await self.is_collection_existed(collection_name):
+            if self.is_collection_existed(collection_name):
                 self.logger.info(f"Deleting collection: {collection_name}")
                 result = self.client.delete_collection(collection_name=collection_name)
                 self.logger.debug(f"Collection '{collection_name}' deletion result: {result}")
@@ -137,7 +137,7 @@ class QdrantDBProvider(VectorDBInterface):
             self.logger.error(f"Error while deleting collection '{collection_name}': {e}")
             return None
 
-    async def create_collection(
+    def create_collection(
         self, 
         collection_name: str, 
         embedding_size: int, 
@@ -152,11 +152,11 @@ class QdrantDBProvider(VectorDBInterface):
 
         try:
             if do_reset:
-                await self.delete_collection(collection_name=collection_name)
+                self.delete_collection(collection_name=collection_name)
 
-            if not await self.is_collection_existed(collection_name):
+            if not self.is_collection_existed(collection_name):
                 self.logger.info(f"Creating new Qdrant collection: {collection_name}")
-                await self.client.create_collection(
+                self.client.create_collection(
                     collection_name=collection_name,
                     vectors_config=models.VectorParams(
                         size=embedding_size,
@@ -174,13 +174,13 @@ class QdrantDBProvider(VectorDBInterface):
         
 
 
-    async def insert_one(self, collection_name: str, text: str, vector: list,
+    def insert_one(self, collection_name: str, text: str, vector: list,
                         metadata: dict = None, 
                         record_id: str = None) -> bool:
         
         self.logger.debug(f"Starting insert_one into collection '{collection_name}'")
 
-        if not await self.is_collection_existed(collection_name):
+        if not self.is_collection_existed(collection_name):
             self.logger.error(f"Cannot insert record: collection '{collection_name}' does not exist.")
             return False
 
@@ -198,7 +198,7 @@ class QdrantDBProvider(VectorDBInterface):
         start_time = time.time()
 
         try:
-            await self.client.upload_records(
+            self.client.upload_records(
                 collection_name=collection_name,
                 records=[record]
             )
@@ -211,13 +211,13 @@ class QdrantDBProvider(VectorDBInterface):
             return False
 
 
-    async def insert_many(self, collection_name: str, texts: list, 
+    def insert_many(self, collection_name: str, texts: list, 
                         vectors: list, metadata: list = None, 
                         record_ids: list = None, batch_size: int = 50) -> bool:
         
         self.logger.debug(f"Starting insert_many into '{collection_name}' with {len(texts)} records")
 
-        if not await self.is_collection_existed(collection_name):
+        if not self.is_collection_existed(collection_name):
             self.logger.error(f"Cannot insert records: collection '{collection_name}' does not exist.")
             return False
 
@@ -256,7 +256,7 @@ class QdrantDBProvider(VectorDBInterface):
 
             try:
                 start_time = time.time()
-                await self.client.upload_records(
+                self.client.upload_records(
                     collection_name=collection_name,
                     records=batch_records,
                 )
@@ -271,15 +271,15 @@ class QdrantDBProvider(VectorDBInterface):
         return True
 
 
-    async def search_by_vector(self, collection_name: str, vector: list, limit: int = 5):
+    def search_by_vector(self, collection_name: str, vector: list, limit: int = 5):
         self.logger.debug(f"Searching in '{collection_name}' with vector of dim={len(vector)} and limit={limit}")
 
-        if not await self.is_collection_existed(collection_name):
+        if not self.is_collection_existed(collection_name):
             self.logger.error(f"Search failed: Collection '{collection_name}' does not exist.")
             return None
 
         try:
-            results = await self.client.search(
+            results = self.client.search(
                 collection_name=collection_name,
                 query_vector=vector,
                 limit=limit
