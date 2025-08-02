@@ -4,7 +4,7 @@ import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 from helper.config import get_settings
 from stores.llm.LLMProviderFactory import LLMProviderFactory
-from stores.vectordb.VectorDBProviderFactory import VectorDBProviderFactory
+from stores.vectorDB.VectorDBProviderFactory import VectorDBProviderFactory
 from routes import base, data, nlp  # Keep all routes
 
 logging.basicConfig(level=logging.INFO)

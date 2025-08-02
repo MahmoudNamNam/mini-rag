@@ -96,51 +96,55 @@ class CoHereProvider(LLMInterface):
             self.logger.error("Text generation failed.", exc_info=True)
             raise e
 
-       
+        
     def embed_text(self, text: str, document_type: Optional[str] = None):
         if not self.client:
-            self.logger.error("Cohere client not initialized.")
+            self.logger.error("Cohere client is not initialized.")
             raise ValueError("Cohere client is not initialized.")
+
         if not self.embedding_model_id or not self.embedding_size:
             self.logger.error("Embedding model ID or size is not set.")
             raise ValueError("Embedding model ID or size is not set.")
 
         input_type = CoHereEnums.DOCUMENT.value
-        if document_type and document_type == DocumentTypeEnum.QUERY.value:
+        if document_type == DocumentTypeEnum.QUERY.value:
             input_type = CoHereEnums.QUERY.value
 
         processed_text = self.process_text(text)
-        self.logger.debug(
-            f"Embedding, model={self.embedding_model_id}, input_type={input_type}, "
-        )
+        self.logger.debug(f"Embedding with model '{self.embedding_model_id}', input_type='{input_type}'")
 
         try:
             response = self.client.embed(
                 model=self.embedding_model_id,
                 texts=[processed_text],
                 input_type=input_type,
-                embedding_types=["float"] 
+                embedding_types=["float"]
             )
 
             emb_obj = response.embeddings
-            if hasattr(emb_obj,"float"):
-                embedding = getattr(emb_obj,"float")[0]
+            if hasattr(emb_obj, "float"):
+                embedding = getattr(emb_obj, "float")[0]
             elif isinstance(emb_obj, list):
                 embedding = emb_obj[0]
             else:
-                self.logger.error("Unexpected embedding format from API.")
+                self.logger.error("Unexpected embedding format from Cohere API.")
                 raise ValueError("Unexpected embedding response format.")
 
-            if len(embedding) != self.embedding_size:
-                self.logger.error(f"Embedding size mismatch: expected {self.embedding_size}, "
-                                  f"got {len(embedding)}")
-                raise ValueError("Embedding size mismatch.")
+            actual_size = len(embedding)
+            if actual_size != self.embedding_size:
+                self.logger.error(f"Embedding size mismatch: expected {self.embedding_size}, got {actual_size}")
+                raise ValueError(
+                    f"Embedding size mismatch for model '{self.embedding_model_id}': "
+                    f"expected {self.embedding_size}, got {actual_size}"
+                )
 
             self.logger.info("Text embedding successful.")
             return embedding
+
         except Exception as e:
             self.logger.error("Text embedding failed.", exc_info=True)
             raise
+
 
     def construct_prompt(self, prompt: str, role: str):
         """
