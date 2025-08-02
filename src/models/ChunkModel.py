@@ -89,3 +89,27 @@ class ChunkModel(BaseDataModel):
         except Exception as e:
             logger.exception("Failed to delete chunks for project ID %s: %s", str(project_id), str(e))
             raise
+    
+    async def get_project_chunks(self, project_id: ObjectId,page_no:int =1, page_size:int = 50 ) -> List[DataChunk]:
+        """
+        Retrieve all chunks associated with a given project_id.
+
+        Args:
+            project_id (ObjectId): The unique identifier of the project.
+            page_no (int): The page number for pagination.
+            page_size (int): The number of records per page.
+
+        Returns:
+            List[DataChunk]: A list of DataChunk objects associated with the project.
+        """
+        logger.info("Retrieving chunks for project ID: %s", str(project_id))
+        try:
+            cursor = self.collection.find(
+                {"chunk_project_id": project_id}
+                ).skip((page_no - 1) * page_size).limit(page_size)
+            chunks = [DataChunk(**record) async for record in cursor]
+            logger.info("Retrieved %d chunks for project ID: %s", len(chunks), str(project_id))
+            return chunks
+        except Exception as e:
+            logger.exception("Failed to retrieve chunks for project ID %s: %s", str(project_id), str(e))
+            raise
