@@ -4,9 +4,8 @@ import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 from helper.config import get_settings
 from stores.llm.LLMProviderFactory import LLMProviderFactory
-from routes import base, data
+from routes import base, data, nlp
 
-# إعداد logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -46,7 +45,19 @@ async def lifespan(app: FastAPI):
         logger.exception("Failed to initialize LLM providers")
         raise
 
-    # Yield control to app
+    # VectorDB Initialization
+    try:
+        vectordb_provider_factory = VectorDBProviderFactory(config=settings)
+        app.vectordb_client = vectordb_provider_factory.create(
+            provider=settings.VECTOR_DB_BACKEND
+        )
+        await app.vectordb_client.connect()
+        logger.info("VectorDB client initialized successfully")
+    except Exception:
+        logger.exception("Failed to initialize VectorDB provider")
+        raise
+
+    # Yield control to the app
     yield
 
     # Shutdown logic
@@ -59,3 +70,4 @@ app = FastAPI(lifespan=lifespan)
 # Register routes
 app.include_router(base.base_router)
 app.include_router(data.data_router)
+app.include_router(nlp.nlp_router)
