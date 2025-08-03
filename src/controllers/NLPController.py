@@ -11,12 +11,13 @@ logger = logging.getLogger(__name__)
 class NLPController(BaseController):
 
     def __init__(self, vectordb_client, generation_client, 
-                 embedding_client):
+                 embedding_client, template_parser):
         super().__init__()
 
         self.vectordb_client = vectordb_client
         self.generation_client = generation_client
         self.embedding_client = embedding_client
+        self.template_parser = template_parser
 
     def create_collection_name(self, project_id: str):
         return f"collection_{project_id}".strip()
@@ -85,9 +86,83 @@ class NLPController(BaseController):
                 return []
 
             logger.info(f"Search completed with {len(results)} results.")
-            return json.loads(json.dumps(results, default=lambda x: x.__dict__))
+            return results
 
         except Exception as e:
             logger.exception(f"Error occurred during vector DB search: {e}")
             raise
+
+    def answer_rag_question(self, project: Project, question: str, limit: int = 5):
+        logger.info(f"[RAG] Answering question for project: {project.project_id} | Q: {question}")
+
+        search_results = self.search_vector_db_collection(
+            project=project,
+            query=question,
+            limit=limit
+        )
+
+        if not search_results:
+            logger.warning("[RAG] No search results found for the given question.")
+            return {
+                "question": question,
+                "answer": None,
+                "context": "",
+                "full_prompt": "",
+                "chat_history": [],
+                "error": "No relevant documents found."
+            }
+
+        context = "\n".join([doc.text for doc in search_results])
+
+        try:
+            system_prompt = self.template_parser.get("rag", "system_prompt") or ""
+            footer_prompt = self.template_parser.get("rag", "footer_prompt", vars={"query": question}) or ""
+        except Exception as e:
+            logger.exception("[RAG] Error retrieving system/footer prompt.")
+            return {"error": "Template loading failed"}
+
+        documents_prompts = "\n".join([
+            self.template_parser.get(
+                group="rag",
+                key="document_prompt",
+                vars={
+                    "doc_num": idx + 1,
+                    "chunk_text": doc.text,
+                }
+            ) or f"[Doc {idx+1}] {doc.text}"
+            for idx, doc in enumerate(search_results)
+        ])
+
+        full_prompt = "\n\n".join([documents_prompts, footer_prompt])
+
+        chat_history = [
+            self.generation_client.construct_prompt(
+                prompt=system_prompt,
+                role=self.generation_client.enums.SYSTEM.value
+            )
+        ]
+
+        try:
+            answer = self.generation_client.generate_text(
+                prompt=full_prompt,
+                chat_history=chat_history,
+                max_output_tokens=self.generation_client.default_output_max_tokens,
+                temperature=self.generation_client.default_generation_temperature
+            )
+            logger.info("[RAG] Answer successfully generated.")
+        except Exception as e:
+            logger.exception("[RAG] Generation failed.")
+            return {"error": "LLM generation failed"}
+
+        return {
+            "question": question,
+            "answer": answer,
+            "context": context,
+            "full_prompt": full_prompt,
+            "chat_history": chat_history
+        }
+
+
+
+            
 
