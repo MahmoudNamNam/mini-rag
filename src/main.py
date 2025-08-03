@@ -5,7 +5,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from helper.config import get_settings
 from stores.llm.LLMProviderFactory import LLMProviderFactory
 from stores.vectorDB.VectorDBProviderFactory import VectorDBProviderFactory
-from routes import base, data, nlp  # Keep all routes
+from routes import base, data, nlp
+from stores.llm.templates.template_parser import TemplateParser
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -59,6 +60,17 @@ async def lifespan(app: FastAPI):
         logger.info("VectorDB client initialized successfully")
     except Exception:
         logger.exception("Failed to initialize VectorDB provider")
+        raise
+
+    # Template Parser Initialization
+    try:
+        app.template_parser = TemplateParser(
+            language=settings.PRIMARY_LANG,
+            default_language=settings.DEFAULT_LANG
+        )
+        logger.info("Template parser initialized successfully")
+    except Exception:
+        logger.exception("Failed to initialize Template Parser")
         raise
 
     yield
