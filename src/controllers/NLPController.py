@@ -65,20 +65,29 @@ class NLPController(BaseController):
         collection_name = self.create_collection_name(project_id=project.project_id)
         logger.info(f"Searching in collection: {collection_name} with query: {query}")
 
-        query_vector = self.embedding_client.embed_text(text=query, document_type=DocumentTypeEnum.QUERY.value)
-        if not query_vector:
-            logger.error("Failed to embed query text.")
-            raise ValueError("Failed to embed query text.")
+        try:
+            query_vector = self.embedding_client.embed_text(
+                text=query,
+                document_type=DocumentTypeEnum.QUERY.value
+            )
+            if not query_vector:
+                logger.error("Failed to embed query text.")
+                raise ValueError("Embedding returned an empty vector.")
 
-        results = self.vectordb_client.search_by_vector(
-            collection_name=collection_name,
-            vector=query_vector,
-            limit=limit
-        )
-        if not results:
-            logger.warning(f"No results found for query: {query}")
-            return False
-        logger.info(f"Search completed with {len(results)} results.")
-        return json.loads(json.dumps(results, default=lambda x: x.__dict__))
+            results = self.vectordb_client.search_by_vector(
+                collection_name=collection_name,
+                vector=query_vector,
+                limit=limit
+            )
 
+            if not results:
+                logger.warning(f"No results found for query: {query}")
+                return []
+
+            logger.info(f"Search completed with {len(results)} results.")
+            return json.loads(json.dumps(results, default=lambda x: x.__dict__))
+
+        except Exception as e:
+            logger.exception(f"Error occurred during vector DB search: {e}")
+            raise
 
