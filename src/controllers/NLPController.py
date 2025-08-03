@@ -60,4 +60,25 @@ class NLPController(BaseController):
 
         logger.info(f"Successfully indexed into collection: {collection_name}")
         return True
+    
+    def search_vector_db_collection(self, project: Project, query: str, limit: int = 10):
+        collection_name = self.create_collection_name(project_id=project.project_id)
+        logger.info(f"Searching in collection: {collection_name} with query: {query}")
+
+        query_vector = self.embedding_client.embed_text(text=query, document_type=DocumentTypeEnum.QUERY.value)
+        if not query_vector:
+            logger.error("Failed to embed query text.")
+            raise ValueError("Failed to embed query text.")
+
+        results = self.vectordb_client.search_by_vector(
+            collection_name=collection_name,
+            vector=query_vector,
+            limit=limit
+        )
+        if not results:
+            logger.warning(f"No results found for query: {query}")
+            return False
+        logger.info(f"Search completed with {len(results)} results.")
+        return json.loads(json.dumps(results, default=lambda x: x.__dict__))
+
 
