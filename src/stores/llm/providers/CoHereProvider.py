@@ -31,6 +31,8 @@ class CoHereProvider(LLMInterface):
         self.embedding_model_id = None
         self.embedding_size = None
 
+        self.enums = CoHereEnums
+
         try:
             self.client = cohere.Client(self.api_key)
             self.logger.info("Cohere client initialized successfully.")
