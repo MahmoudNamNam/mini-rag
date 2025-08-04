@@ -29,3 +29,4 @@ class ResponseStatus(Enum):
     VECTORDB_SEARCH_SUCCESS = "vectordb_search_success"
     RAG_ANSWER_ERROR = "rag_answer_error"
     RAG_ANSWER_SUCCESS = "rag_answer_success"
+    RAG_ANSWER_NOT_FOUND = "rag_answer_not_found"
