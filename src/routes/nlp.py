@@ -5,6 +5,8 @@ from models.ProjectModel import ProjectModel
 from models.ChunkModel import ChunkModel
 from controllers import NLPController
 from models import ResponseStatus
+from stores.llm.templates.template_parser import TemplateParser
+
 
 import logging
 
@@ -34,6 +36,7 @@ async def index_project(request: Request, project_id: str, push_request: PushReq
         vectordb_client=request.app.vectordb_client,
         generation_client=request.app.generation_client,
         embedding_client=request.app.embedding_client,
+        template_parser=request.app.template_parser
     )
 
     has_records = True
@@ -91,6 +94,8 @@ async def get_project_index_info(request: Request, project_id: str):
         vectordb_client=request.app.vectordb_client,
         generation_client=request.app.generation_client,
         embedding_client=request.app.embedding_client,
+        template_parser=request.app.template_parser
+
     )
 
     collection_info = nlp_controller.get_vector_db_collection_info(project=project)
@@ -122,6 +127,7 @@ async def search_index(request: Request, project_id: str, search_request: Search
         vectordb_client=request.app.vectordb_client,
         generation_client=request.app.generation_client,
         embedding_client=request.app.embedding_client,
+        template_parser=request.app.template_parser
     )
 
     search_results = nlp_controller.search_vector_db_collection(
@@ -141,6 +147,58 @@ async def search_index(request: Request, project_id: str, search_request: Search
     return JSONResponse(
         content={
             "status": ResponseStatus.VECTORDB_SEARCH_SUCCESS.value,
-            "results": search_results
+            "results": [
+                {"text": result.text, "score": result.score} for result in search_results
+            ]
+        }
+    )
+
+
+@nlp_router.post("/index/answer/{project_id}")
+async def answer_rag(request: Request, project_id: str, search_request: SearchRequest):
+    logger.info(f"[ANSWER] Answering RAG question for project_id={project_id}")
+
+    project_model = await ProjectModel.create_instance(db_client=request.app.mongodb_client)
+    project = await project_model.get_project_or_create_one(project_id=project_id)
+
+    if not project:
+        logger.warning(f"[ANSWER] Project not found: {project_id}")
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"status": ResponseStatus.PROJECT_NOT_FOUND_ERROR.value}
+        )
+
+    nlp_controller = NLPController(
+        vectordb_client=request.app.vectordb_client,
+        generation_client=request.app.generation_client,
+        embedding_client=request.app.embedding_client,
+        template_parser=request.app.template_parser
+    )
+
+    try:
+        answer_response = nlp_controller.answer_rag_question(
+            project=project,
+            question=search_request.query_text,
+            limit=search_request.limit
+        )
+    except Exception as e:
+        logger.exception(f"[ANSWER] Exception occurred during RAG answer generation: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"status": ResponseStatus.RAG_ANSWER_ERROR.value}
+        )
+
+    if not answer_response or not answer_response.get("answer"):
+        logger.info(f"[ANSWER] No answer generated for query: {search_request.query_text}")
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"status": ResponseStatus.RAG_ANSWER_NOT_FOUND.value}
+        )
+
+    logger.info(f"[ANSWER] RAG answer successfully generated for project_id={project_id}")
+    return JSONResponse(
+        content={
+            "status": ResponseStatus.RAG_ANSWER_SUCCESS.value,
+            "answer": answer_response
         }
     )

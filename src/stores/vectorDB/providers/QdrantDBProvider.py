@@ -5,6 +5,7 @@ from ..VectorDBEnums import DistanceMethodEnums
 import logging
 from typing import List
 import time
+from models.db_schemes import RetrievedDocument
 
 
 class QdrantDBProvider(VectorDBInterface):
@@ -271,7 +272,7 @@ class QdrantDBProvider(VectorDBInterface):
         return True
 
 
-    def search_by_vector(self, collection_name: str, vector: list, limit: int = 5):
+    def search_by_vector(self, collection_name: str, vector: list, limit: int = 5)-> List[RetrievedDocument]:
         self.logger.debug(f"Searching in '{collection_name}' with vector of dim={len(vector)} and limit={limit}")
 
         if not self.is_collection_existed(collection_name):
@@ -285,14 +286,19 @@ class QdrantDBProvider(VectorDBInterface):
                 limit=limit
             )
 
-            if not results:
+            if not results or len(results) == 0:
                 self.logger.info(f"No results found for vector search in '{collection_name}'")
                 return None
 
 
 
             self.logger.info(f"Search returned {len(results)} results from '{collection_name}'")
-            return results
+            return [
+                RetrievedDocument(
+                    text=result.payload.get("text", ""),
+                    score=result.score
+                ) for result in results
+            ]
 
         except Exception as e:
             self.logger.error(f"Error during vector search in '{collection_name}': {e}")
