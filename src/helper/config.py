@@ -35,6 +35,15 @@ class Settings(BaseSettings):
     GENERATION_DEFAULT_MAX_TOKENS: int = None
     GENERATION_DEFAULT_TEMPERATURE: float = None
 
+    # Vector Database Configuration
+    VECTOR_DB_BACKEND: str
+    VECTOR_DB_PATH: str
+    VECTOR_DB_DISTANCE_METHOD: str
+
+    # Template Configs 
+    PRIMARY_LANG: str = "en"
+    DEFAULT_LANG: str = "en"
+
     model_config = SettingsConfigDict(
         env_file=os.environ.get("ENV_FILE", ".env")
     )

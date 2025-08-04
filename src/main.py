@@ -4,11 +4,13 @@ import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 from helper.config import get_settings
 from stores.llm.LLMProviderFactory import LLMProviderFactory
-from routes import base, data
+from stores.vectorDB.VectorDBProviderFactory import VectorDBProviderFactory
+from routes import base, data, nlp
+from stores.llm.templates.template_parser import TemplateParser
 
-# إعداد logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,12 +48,40 @@ async def lifespan(app: FastAPI):
         logger.exception("Failed to initialize LLM providers")
         raise
 
-    # Yield control to app
+    # VectorDB Initialization
+    try:
+        vectordb_provider_factory = VectorDBProviderFactory(config=settings)
+        app.vectordb_client = vectordb_provider_factory.create(provider=settings.VECTOR_DB_BACKEND)
+
+        if not app.vectordb_client:
+            raise ValueError(f"Invalid VECTOR_DB_BACKEND: {settings.VECTOR_DB_BACKEND}")
+
+        app.vectordb_client.connect()
+        logger.info("VectorDB client initialized successfully")
+    except Exception:
+        logger.exception("Failed to initialize VectorDB provider")
+        raise
+
+    # Template Parser Initialization
+    try:
+        app.template_parser = TemplateParser(
+            language=settings.PRIMARY_LANG,
+            default_language=settings.DEFAULT_LANG
+        )
+        logger.info("Template parser initialized successfully")
+    except Exception:
+        logger.exception("Failed to initialize Template Parser")
+        raise
+
     yield
 
     # Shutdown logic
     app.mongodb_client.close()
     logger.info("MongoDB client closed")
+
+    app.vectordb_client.disconnect()
+    logger.info("VectorDB client disconnected")
+
 
 # FastAPI app with lifespan
 app = FastAPI(lifespan=lifespan)
@@ -59,3 +89,4 @@ app = FastAPI(lifespan=lifespan)
 # Register routes
 app.include_router(base.base_router)
 app.include_router(data.data_router)
+app.include_router(nlp.nlp_router)
