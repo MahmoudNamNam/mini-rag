@@ -39,7 +39,7 @@ class OpenAIProvider(LLMInterface):
         try:
             self.client = OpenAI(
                 api_key=self.api_key,
-                api_base=self.api_url
+                base_url=self.api_url
             )
             self.logger.info("OpenAI client initialized successfully.")
         except Exception as e:
@@ -90,7 +90,7 @@ class OpenAIProvider(LLMInterface):
             f"Generating text with model: {self.generation_model_id}, Max tokens: {max_output_tokens}, Temperature: {temperature}"
         )
 
-        chat_history.append(self.construct_prompt(prompt= prompt,role= OpenAIEnums.ChatRole.USER.value))
+        chat_history.append(self.construct_prompt(prompt= prompt,role= OpenAIEnums.USER.value))
         try:
             response = self.client.chat.completions.create(
                 model=self.generation_model_id,
