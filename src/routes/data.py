@@ -32,14 +32,14 @@ data_router = APIRouter(
 @data_router.post("/upload/{project_id}")
 async def upload_data(
     request: Request,
-    project_id: str,
+    project_id: int,
     file: UploadFile,
     app_settings: Settings = Depends(get_settings)
 ):
     """
     Upload a data file to the server for a specific project.
     """
-    project_model = await ProjectModel.create_instance(db_client= request.app.mongodb_client)
+    project_model = await ProjectModel.create_instance(db_client= request.app.db_client)
     project = await project_model.get_project_or_create_one(project_id=project_id)
 
     data_controller = DataController()
@@ -86,16 +86,16 @@ async def upload_data(
             }
         )
     # Step 4: Create an Asset record
-    asset_model = await AssetModel.create_instance(db_client=request.app.mongodb_client)
+    asset_model = await AssetModel.create_instance(db_client=request.app.db_client)
     asset_resource = Asset(
-        asset_project_id=ObjectId(project.id),
+        asset_project_id=project.project_id,
         asset_type=AssetTypeEnum.DOCUMENT,
         asset_name=file_id,
         asset_size=os.path.getsize(safe_path),
     )
     try:
         asset = await asset_model.create_asset(asset=asset_resource)
-        logger.info(f"Asset created successfully with ID: {asset.id}")
+        logger.info(f"Asset created successfully with ID: {asset.asset_id}")
     except Exception as e:
         logger.error(f"Failed to create asset record: {e}")
         return JSONResponse(
@@ -112,7 +112,7 @@ async def upload_data(
         status_code=status.HTTP_201_CREATED,
         content={
             "Status": ResponseStatus.FILE_UPLOAD_SUCCESS.value,
-            "file_id": str(asset.id),
+            "file_id": str(asset.asset_id),
             "file_path": str(safe_path),
 
         }
@@ -120,7 +120,7 @@ async def upload_data(
 
 
 @data_router.post("/process/{project_id}")
-async def process_endpoint(request: Request, project_id: str, process_request: ProcessRequest):
+async def process_endpoint(request: Request, project_id: int, process_request: ProcessRequest):
     logger.info(f"Starting file processing for project_id: {project_id}")
 
     chunk_size = process_request.chunk_size
@@ -131,18 +131,18 @@ async def process_endpoint(request: Request, project_id: str, process_request: P
 
     try:
         project_model = await ProjectModel.create_instance(
-            db_client=request.app.mongodb_client
+            db_client=request.app.db_client
         )
         project = await project_model.get_project_or_create_one(
             project_id=project_id
         )
-        logger.info(f"Project resolved: {project_id} -> {project.id}")
+        logger.info(f"Project resolved: {project_id} -> {project.project_id}")
     except Exception as e:
         logger.exception(f"Failed to initialize or retrieve project: {project_id}")
         raise
 
     asset_model = await AssetModel.create_instance(
-        db_client=request.app.mongodb_client
+        db_client=request.app.db_client
     )
 
     project_files_ids = {}
@@ -151,7 +151,7 @@ async def process_endpoint(request: Request, project_id: str, process_request: P
         if process_request.file_id:
             logger.info(f"Fetching specific file: {process_request.file_id}")
             asset_record = await asset_model.get_asset_record(
-                asset_project_id=project.id,
+                asset_project_id=project.project_id,
                 asset_name=process_request.file_id
             )
 
@@ -162,19 +162,19 @@ async def process_endpoint(request: Request, project_id: str, process_request: P
                     content={"status": ResponseStatus.FILE_ID_ERROR.value}
                 )
 
-            project_files_ids = {asset_record.id: asset_record.asset_name}
+            project_files_ids = {asset_record.asset_id: asset_record.asset_name}
         else:
-            logger.info(f"Fetching all DOCUMENT-type assets for project: {project.id}")
+            logger.info(f"Fetching all DOCUMENT-type assets for project: {project.project_id}")
             project_files = await asset_model.get_all_project_assets(
-                asset_project_id=project.id,
+                asset_project_id=project.project_id,
                 asset_type=AssetTypeEnum.DOCUMENT.value,
             )
             project_files_ids = {
-                record.id: record.asset_name for record in project_files
+                record.asset_id: record.asset_name for record in project_files
             }
 
         if len(project_files_ids) == 0:
-            logger.warning(f"No documents found for project: {project.id}")
+            logger.warning(f"No documents found for project: {project.project_id}")
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={"status": ResponseStatus.NO_FILES_ERROR.value}
@@ -189,12 +189,12 @@ async def process_endpoint(request: Request, project_id: str, process_request: P
     no_files = 0
 
     chunk_model = await ChunkModel.create_instance(
-        db_client=request.app.mongodb_client
+        db_client=request.app.db_client
     )
 
     if do_reset == 1:
-        logger.info(f"Reset flag is set. Deleting old chunks for project: {project.id}")
-        deleted_count = await chunk_model.delete_chunks_by_project_id(project_id=project.id)
+        logger.info(f"Reset flag is set. Deleting old chunks for project: {project.project_id}")
+        deleted_count = await chunk_model.delete_chunks_by_project_id(project_id=project.project_id)
         logger.info(f"Deleted {deleted_count} old chunks")
 
     for asset_id, file_id in project_files_ids.items():
@@ -225,7 +225,7 @@ async def process_endpoint(request: Request, project_id: str, process_request: P
                     chunk_text=chunk.page_content,
                     chunk_metadata=chunk.metadata,
                     chunk_order=i + 1,
-                    chunk_project_id=project.id,
+                    chunk_project_id=project.project_id,
                     chunk_asset_id=asset_id
                 )
                 for i, chunk in enumerate(file_chunks)

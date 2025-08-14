@@ -18,11 +18,11 @@ nlp_router = APIRouter(
 )
 
 @nlp_router.post("/index/push/{project_id}")
-async def index_project(request: Request, project_id: str, push_request: PushRequest):
+async def index_project(request: Request, project_id: int, push_request: PushRequest):
     logger.info(f"[INDEX] Starting indexing for project_id={project_id}")
 
-    project_model = await ProjectModel.create_instance(db_client=request.app.mongodb_client)
-    chunk_model = await ChunkModel.create_instance(db_client=request.app.mongodb_client)
+    project_model = await ProjectModel.create_instance(db_client=request.app.db_client)
+    chunk_model = await ChunkModel.create_instance(db_client=request.app.db_client)
 
     project = await project_model.get_project_or_create_one(project_id=project_id)
     if not project:
@@ -45,7 +45,7 @@ async def index_project(request: Request, project_id: str, push_request: PushReq
     idx = 0
 
     while has_records:
-        page_chunks = await chunk_model.get_project_chunks(project_id=project.id, page_no=page_no)
+        page_chunks = await chunk_model.get_project_chunks(project_id=project.project_id, page_no=page_no)
         if len(page_chunks):
             page_no += 1
 
@@ -84,10 +84,10 @@ async def index_project(request: Request, project_id: str, push_request: PushReq
     )
 
 @nlp_router.get("/index/info/{project_id}")
-async def get_project_index_info(request: Request, project_id: str):
+async def get_project_index_info(request: Request, project_id: int):
     logger.info(f"[INFO] Fetching vector DB info for project_id={project_id}")
 
-    project_model = await ProjectModel.create_instance(db_client=request.app.mongodb_client)
+    project_model = await ProjectModel.create_instance(db_client=request.app.db_client)
     project = await project_model.get_project_or_create_one(project_id=project_id)
 
     nlp_controller = NLPController(
@@ -110,10 +110,10 @@ async def get_project_index_info(request: Request, project_id: str):
 
 
 @nlp_router.post("/index/search/{project_id}")
-async def search_index(request: Request, project_id: str, search_request: SearchRequest):
+async def search_index(request: Request, project_id: int, search_request: SearchRequest):
     logger.info(f"[SEARCH] Searching in vector DB for project_id={project_id}")
 
-    project_model = await ProjectModel.create_instance(db_client=request.app.mongodb_client)
+    project_model = await ProjectModel.create_instance(db_client=request.app.db_client)
     project = await project_model.get_project_or_create_one(project_id=project_id)
 
     if not project:
@@ -155,10 +155,10 @@ async def search_index(request: Request, project_id: str, search_request: Search
 
 
 @nlp_router.post("/index/answer/{project_id}")
-async def answer_rag(request: Request, project_id: str, search_request: SearchRequest):
+async def answer_rag(request: Request, project_id: int, search_request: SearchRequest):
     logger.info(f"[ANSWER] Answering RAG question for project_id={project_id}")
 
-    project_model = await ProjectModel.create_instance(db_client=request.app.mongodb_client)
+    project_model = await ProjectModel.create_instance(db_client=request.app.db_client)
     project = await project_model.get_project_or_create_one(project_id=project_id)
 
     if not project:
