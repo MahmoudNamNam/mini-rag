@@ -63,7 +63,7 @@ class DataController(BaseController):
             "Status": ResponseStatus.FILE_UPLOAD_SUCCESS.value,
         }
 
-    async def generate_unique_filepath(self, orig_file_name: str, project_id: str) -> Tuple[str, str]:
+    async def generate_unique_filepath(self, orig_file_name: str, project_id: int) -> Tuple[str, str]:
         logger.info(f"Generating unique filepath for file: {orig_file_name}, project ID: {project_id}")
         random_key = self.generate_unique_key(length=12)
         project_path = ProjectController().get_project_path(project_id=project_id)
