@@ -1,29 +1,59 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import logging
-from motor.motor_asyncio import AsyncIOMotorClient
 from helper.config import get_settings
 from stores.llm.LLMProviderFactory import LLMProviderFactory
 from stores.vectorDB.VectorDBProviderFactory import VectorDBProviderFactory
 from routes import base, data, nlp
 from stores.llm.templates.template_parser import TemplateParser
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+try:
+    import colorlog
 
+    handler = colorlog.StreamHandler()
+    handler.setFormatter(colorlog.ColoredFormatter(
+        "%(log_color)s%(asctime)s - [%(levelname)s] - %(name)s - %(filename)s:%(lineno)d - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        log_colors={
+            'DEBUG':    'cyan',
+            'INFO':     'green',
+            'WARNING':  'yellow',
+            'ERROR':    'red',
+            'CRITICAL': 'bold_red',
+        }
+    ))
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)  
+    root_logger.handlers = [handler]
+
+except ImportError:
+    logging.basicConfig(level=logging.INFO)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
 
-    # MongoDB connection
+    # PostgreSQL connection
     try:
-        app.mongodb_client = AsyncIOMotorClient(settings.MONGO_URI)
-        app.mongodb = app.mongodb_client[settings.MONGO_DB_NAME]
-        await app.mongodb.command("ping")
-        logger.info("Connected to MongoDB")
+        postgres_conn = (
+            f"postgresql+asyncpg://{settings.POSTGRES_USERNAME}:"
+            f"{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:"
+            f"{settings.POSTGRES_PORT}/{settings.POSTGRES_MAIN_DATABASE}"
+        )
+        app.db_engine = create_async_engine(postgres_conn, echo=False)
+        app.db_client = sessionmaker(
+            bind=app.db_engine, 
+            class_=AsyncSession,
+            expire_on_commit=False
+        )
+        logger.info("Connected to PostgreSQL")
     except Exception:
-        logger.exception("Failed to connect to MongoDB")
+        logger.exception("Failed to connect to PostgreSQL")
         raise
 
     # LLM Initialization
@@ -76,12 +106,17 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown logic
-    app.mongodb_client.close()
-    logger.info("MongoDB client closed")
+    try:
+        await app.db_engine.dispose()
+        logger.info("PostgreSQL engine disposed")
+    except Exception:
+        logger.exception("Failed to dispose PostgreSQL engine")
 
-    app.vectordb_client.disconnect()
-    logger.info("VectorDB client disconnected")
-
+    try:
+        app.vectordb_client.disconnect()
+        logger.info("VectorDB client disconnected")
+    except Exception:
+        logger.exception("Failed to disconnect VectorDB client")
 
 # FastAPI app with lifespan
 app = FastAPI(lifespan=lifespan)
