@@ -152,4 +152,4 @@ class OpenAIProvider(LLMInterface):
 
     def construct_prompt(self, prompt: str, role: str):
         self.logger.debug(f"Constructing prompt with role={role}")
-        return {"role": role, "content": self.process_text(prompt)}
+        return {"role": role, "content": prompt}

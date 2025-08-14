@@ -153,4 +153,4 @@ class CoHereProvider(LLMInterface):
         Constructs a prompt with the specified role.
         """
         self.logger.debug(f"Constructing prompt with role={role}")
-        return {"role": role, "text": self.process_text(prompt)}
+        return {"role": role, "text": prompt}
