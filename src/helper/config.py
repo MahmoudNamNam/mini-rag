@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     MONGO_URI: str
     MONGO_DB_NAME: str
 
+    # POSTGRES
+    POSTGRES_USERNAME: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_HOST: str
+    POSTGRES_PORT: int
+    POSTGRES_MAIN_DATABASE: str
+
     # LLM config
     GENERATION_BACKEND: str
     EMBEDDING_BACKEND: str
