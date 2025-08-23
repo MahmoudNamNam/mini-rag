@@ -194,7 +194,7 @@ async def process_endpoint(request: Request, project_id: int, process_request: P
 
     if do_reset == 1:
         logger.info(f"Reset flag is set. Deleting old chunks for project: {project.project_id}")
-        deleted_count = await chunk_model.delete_chunks_by_project_id(project_id=project.project_id)
+        deleted_count = await chunk_model.delete_chunk_by_project_id(project_id=project.project_id)
         logger.info(f"Deleted {deleted_count} old chunks")
 
     for asset_id, file_id in project_files_ids.items():
